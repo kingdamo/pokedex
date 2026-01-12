@@ -170,26 +170,61 @@
             border-color: rgba(255,255,255,0.6);
         }
         .search-container {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
             text-align: center;
             margin-bottom: 20px;
         }
-        .search-input {
+        .search-wrapper {
+            position: relative;
+            display: inline-block;
             width: 100%;
             max-width: 400px;
-            padding: 12px 20px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 20px;
             font-size: 1em;
             border: none;
             border-radius: 25px;
-            background: rgba(255,255,255,0.95);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.98);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             outline: none;
             transition: box-shadow 0.3s;
         }
         .search-input:focus {
-            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         }
         .search-input::placeholder {
             color: #888;
+        }
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: #ccc;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            color: white;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .search-clear:hover {
+            background: #999;
+        }
+        .search-clear.visible {
+            display: flex;
+        }
+        .generation-section.hidden {
+            display: none;
         }
     </style>
 </head>
@@ -201,7 +236,10 @@
         </div>
         <button class="clear-collection" onclick="clearCollection()">🗑️ Clear Collection</button>
         <div class="search-container">
-            <input type="text" class="search-input" id="pokemon-search" placeholder="Search Pokemon by name..." oninput="filterPokemon(this.value)">
+            <div class="search-wrapper">
+                <input type="text" class="search-input" id="pokemon-search" placeholder="Search Pokemon by name..." oninput="filterPokemon(this.value)">
+                <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+            </div>
         </div>
         <div id="generations-container"></div>
     </div>
@@ -257,7 +295,11 @@
 
         function filterPokemon(searchTerm) {
             const term = searchTerm.toLowerCase().trim();
+            const clearBtn = document.getElementById('search-clear');
+            clearBtn.classList.toggle('visible', term.length > 0);
+
             generations.forEach(gen => {
+                const section = document.getElementById(`gen-${gen.id}-grid`).closest('.generation-section');
                 const grid = document.getElementById(`gen-${gen.id}-grid`);
                 const header = grid.previousElementSibling;
                 const icon = header.querySelector('.toggle-icon');
@@ -267,6 +309,13 @@
                     p.name.toLowerCase().includes(term) || String(p.id).toLowerCase().includes(term)
                 );
 
+                // Hide entire section if no matches during search
+                if (term && !hasMatches) {
+                    section.classList.add('hidden');
+                } else {
+                    section.classList.remove('hidden');
+                }
+
                 if (term && hasMatches) {
                     // Load and expand generation if it has matches
                     if (!loadedGens.has(gen.id)) {
@@ -274,8 +323,8 @@
                     }
                     grid.classList.add('open');
                     icon.classList.add('open');
-                } else if (term && !hasMatches) {
-                    // Collapse generation if no matches
+                } else if (!term) {
+                    // When search cleared, restore default collapsed state
                     grid.classList.remove('open');
                     icon.classList.remove('open');
                 }
@@ -306,6 +355,13 @@
                     }
                 }
             });
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('pokemon-search');
+            input.value = '';
+            filterPokemon('');
+            input.focus();
         }
 
         // Sprite ID mapping for forms (PokeAPI form IDs)
@@ -729,11 +785,11 @@
                 {id:827,name:"Nickit"},{id:828,name:"Thievul"},{id:829,name:"Gossifleur"},{id:830,name:"Eldegoss"},
                 {id:831,name:"Wooloo"},{id:832,name:"Dubwool"},{id:833,name:"Chewtle"},{id:834,name:"Drednaw"},
                 {id:835,name:"Yamper"},{id:836,name:"Boltund"},{id:837,name:"Rolycoly"},{id:838,name:"Carkol"},{id:839,name:"Coalossal"},
-                {id:840,name:"Applin"},{id:841,name:"Flapple"},{id:842,name:"Appletun"},{id:1011,name:"Dipplin"},{id:1019,name:"Hydrapple"},
+                {id:840,name:"Applin"},{id:841,name:"Flapple"},{id:842,name:"Appletun"},
                 {id:843,name:"Silicobra"},{id:844,name:"Sandaconda"},{id:845,name:"Cramorant"},
                 {id:846,name:"Arrokuda"},{id:847,name:"Barraskewda"},{id:848,name:"Toxel"},{id:849,name:"Toxtricity"},
                 {id:850,name:"Sizzlipede"},{id:851,name:"Centiskorch"},{id:852,name:"Clobbopus"},{id:853,name:"Grapploct"},
-                {id:854,name:"Sinistea"},{id:855,name:"Polteageist"},{id:1012,name:"Poltchageist"},{id:1013,name:"Sinistcha"},
+                {id:854,name:"Sinistea"},{id:855,name:"Polteageist"},
                 {id:856,name:"Hatenna"},{id:857,name:"Hattrem"},{id:858,name:"Hatterene"},
                 {id:859,name:"Impidimp"},{id:860,name:"Morgrem"},{id:861,name:"Grimmsnarl"},
                 {id:868,name:"Milcery"},{id:869,name:"Alcremie"},{id:870,name:"Falinks"},{id:"870-mega",name:"Falinks",zaSprite:"870-m"},{id:871,name:"Pincurchin"},
@@ -771,10 +827,11 @@
                 {id:988,name:"Slither Wing"},{id:989,name:"Sandy Shocks"},{id:990,name:"Iron Treads"},{id:991,name:"Iron Bundle"},
                 {id:992,name:"Iron Hands"},{id:993,name:"Iron Jugulis"},{id:994,name:"Iron Moth"},{id:995,name:"Iron Thorns"},
                 {id:996,name:"Frigibax"},{id:997,name:"Arctibax"},{id:998,name:"Baxcalibur"},{id:"998-mega",name:"Baxcalibur",zaSprite:"998-m"},
-                {id:999,name:"Gimmighoul"},{id:1000,name:"Gholdengo"},
+                {id:"999-roaming",name:"Gimmighoul",spriteId:10263},{id:999,name:"Gimmighoul"},{id:1000,name:"Gholdengo"},
                 {id:1001,name:"Wo-Chien"},{id:1002,name:"Chien-Pao"},{id:1003,name:"Ting-Lu"},{id:1004,name:"Chi-Yu"},
                 {id:1005,name:"Roaring Moon"},{id:1006,name:"Iron Valiant"},{id:1007,name:"Koraidon"},{id:1008,name:"Miraidon"},
-                {id:1009,name:"Walking Wake"},{id:1010,name:"Iron Leaves"},
+                {id:1009,name:"Walking Wake"},{id:1010,name:"Iron Leaves"},{id:1011,name:"Dipplin"},{id:1019,name:"Hydrapple"},
+                {id:1012,name:"Poltchageist"},{id:1013,name:"Sinistcha"},
                 {id:1014,name:"Okidogi"},{id:1015,name:"Munkidori"},{id:1016,name:"Fezandipiti"},{id:1017,name:"Ogerpon Teal"},{id:"1017-wellspring",name:"Ogerpon Wellspring",spriteId:10273},{id:"1017-hearthflame",name:"Ogerpon Hearthflame",spriteId:10274},{id:"1017-cornerstone",name:"Ogerpon Cornerstone",spriteId:10275},
                 {id:1020,name:"Gouging Fire"},{id:1021,name:"Raging Bolt"},{id:1022,name:"Iron Boulder"},{id:1023,name:"Iron Crown"},
                 {id:1024,name:"Terapagos Normal"},{id:"1024-terastal",name:"Terapagos Terastal",spriteId:10276},{id:"1024-stellar",name:"Terapagos Stellar",spriteId:10277},{id:1025,name:"Pecharunt"}
