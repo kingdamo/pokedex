@@ -169,6 +169,28 @@
             background: rgba(255,255,255,0.3);
             border-color: rgba(255,255,255,0.6);
         }
+        .search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255,255,255,0.95);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            outline: none;
+            transition: box-shadow 0.3s;
+        }
+        .search-input:focus {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        .search-input::placeholder {
+            color: #888;
+        }
     </style>
 </head>
 <body>
@@ -178,6 +200,9 @@
             <span>📦 Collection: <strong id="total-collected">0</strong> / <strong id="total-pokemon">0</strong> Pokémon</span>
         </div>
         <button class="clear-collection" onclick="clearCollection()">🗑️ Clear Collection</button>
+        <div class="search-container">
+            <input type="text" class="search-input" id="pokemon-search" placeholder="Search Pokemon by name..." oninput="filterPokemon(this.value)">
+        </div>
         <div id="generations-container"></div>
     </div>
     <script>
@@ -230,6 +255,59 @@
             }
         }
 
+        function filterPokemon(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            generations.forEach(gen => {
+                const grid = document.getElementById(`gen-${gen.id}-grid`);
+                const header = grid.previousElementSibling;
+                const icon = header.querySelector('.toggle-icon');
+
+                // Check if any Pokemon in this generation match (name or form type)
+                const hasMatches = !term || gen.pokemon.some(p =>
+                    p.name.toLowerCase().includes(term) || String(p.id).toLowerCase().includes(term)
+                );
+
+                if (term && hasMatches) {
+                    // Load and expand generation if it has matches
+                    if (!loadedGens.has(gen.id)) {
+                        loadGeneration(gen.id);
+                    }
+                    grid.classList.add('open');
+                    icon.classList.add('open');
+                } else if (term && !hasMatches) {
+                    // Collapse generation if no matches
+                    grid.classList.remove('open');
+                    icon.classList.remove('open');
+                }
+
+                // Filter cards if loaded
+                if (loadedGens.has(gen.id)) {
+                    const cards = grid.querySelectorAll('.pokemon-card');
+                    let visibleCount = 0;
+
+                    cards.forEach((card, index) => {
+                        const pokemon = gen.pokemon[index];
+                        const matches = !term || pokemon.name.toLowerCase().includes(term) || String(pokemon.id).toLowerCase().includes(term);
+                        card.style.display = matches ? '' : 'none';
+                        if (matches) visibleCount++;
+                    });
+
+                    // Update header count when filtering
+                    const countEl = document.getElementById(`gen-${gen.id}-collected`);
+                    if (countEl && term) {
+                        const collected = gen.pokemon.filter((p, i) => {
+                            const card = cards[i];
+                            return card && card.style.display !== 'none' && collection.has(String(p.id));
+                        }).length;
+                        countEl.textContent = `${collected} / ${visibleCount} shown`;
+                    } else if (countEl) {
+                        const collected = gen.pokemon.filter(p => collection.has(String(p.id))).length;
+                        countEl.textContent = `${collected} / ${gen.pokemon.length} collected`;
+                    }
+                }
+            });
+        }
+
         // Sprite ID mapping for forms (PokeAPI form IDs)
         const formSpriteIds = {
             // Megas
@@ -260,8 +338,8 @@
             // Hisuian
             "58-hisui": 10229, "59-hisui": 10230, "100-hisui": 10231, "101-hisui": 10232,
             "157-hisui": 10233, "211-hisui": 10234, "215-hisui": 10235, "503-hisui": 10236,
-            "549-hisui": 10237, "570-hisui": 10239, "571-hisui": 10240, "628-hisui": 10241,
-            "705-hisui": 10242, "706-hisui": 10243, "713-hisui": 10244, "724-hisui": 10245,
+            "549-hisui": 10237, "570-hisui": 10238, "571-hisui": 10239, "628-hisui": 10240,
+            "705-hisui": 10241, "706-hisui": 10242, "713-hisui": 10243, "724-hisui": 10244,
             // Paldean
             "128-paldea-combat": 10250, "128-paldea-blaze": 10251, "128-paldea-aqua": 10252,
             "194-paldea": 10253,
@@ -271,6 +349,10 @@
         };
 
         function getImageUrl(pokemon) {
+            // Z-A sprites from Serebii for new Mega Evolutions
+            if (pokemon.zaSprite) {
+                return `https://www.serebii.net/legendsz-a/pokemon/${pokemon.zaSprite}.png`;
+            }
             const id = pokemon.spriteId || (typeof pokemon.id === 'number' ? pokemon.id : formSpriteIds[pokemon.id]);
             // Primary: Pokemon HOME sprites (high quality 512x512)
             return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${id || pokemon.id}.png`;
@@ -370,11 +452,11 @@
                 {id:16,name:"Pidgey"},{id:17,name:"Pidgeotto"},{id:18,name:"Pidgeot"},{id:"18-mega",name:"Pidgeot",spriteId:10073},
                 {id:19,name:"Rattata"},{id:"19-alola",name:"Rattata",spriteId:10091},{id:20,name:"Raticate"},{id:"20-alola",name:"Raticate",spriteId:10092},
                 {id:21,name:"Spearow"},{id:22,name:"Fearow"},{id:23,name:"Ekans"},{id:24,name:"Arbok"},
-                {id:172,name:"Pichu"},{id:25,name:"Pikachu"},{id:26,name:"Raichu"},{id:"26-alola",name:"Raichu",spriteId:10100},
+                {id:172,name:"Pichu"},{id:25,name:"Pikachu"},{id:26,name:"Raichu"},{id:"26-alola",name:"Raichu",spriteId:10100},{id:"26-mega-x",name:"Raichu",zaSprite:"026-mx"},{id:"26-mega-y",name:"Raichu",zaSprite:"026-my"},
                 {id:27,name:"Sandshrew"},{id:"27-alola",name:"Sandshrew",spriteId:10101},{id:28,name:"Sandslash"},{id:"28-alola",name:"Sandslash",spriteId:10102},
                 {id:29,name:"Nidoran♀"},{id:30,name:"Nidorina"},{id:31,name:"Nidoqueen"},
                 {id:32,name:"Nidoran♂"},{id:33,name:"Nidorino"},{id:34,name:"Nidoking"},
-                {id:173,name:"Cleffa"},{id:35,name:"Clefairy"},{id:36,name:"Clefable"},
+                {id:173,name:"Cleffa"},{id:35,name:"Clefairy"},{id:36,name:"Clefable"},{id:"36-mega",name:"Clefable",zaSprite:"036-m"},
                 {id:37,name:"Vulpix"},{id:"37-alola",name:"Vulpix",spriteId:10103},{id:38,name:"Ninetales"},{id:"38-alola",name:"Ninetales",spriteId:10104},
                 {id:174,name:"Igglybuff"},{id:39,name:"Jigglypuff"},{id:40,name:"Wigglytuff"},
                 {id:41,name:"Zubat"},{id:42,name:"Golbat"},{id:169,name:"Crobat"},
@@ -388,7 +470,7 @@
                 {id:60,name:"Poliwag"},{id:61,name:"Poliwhirl"},{id:62,name:"Poliwrath"},{id:186,name:"Politoed"},
                 {id:63,name:"Abra"},{id:64,name:"Kadabra"},{id:65,name:"Alakazam"},{id:"65-mega",name:"Alakazam",spriteId:10037},
                 {id:66,name:"Machop"},{id:67,name:"Machoke"},{id:68,name:"Machamp"},
-                {id:69,name:"Bellsprout"},{id:70,name:"Weepinbell"},{id:71,name:"Victreebel"},
+                {id:69,name:"Bellsprout"},{id:70,name:"Weepinbell"},{id:71,name:"Victreebel"},{id:"71-mega",name:"Victreebel",zaSprite:"071-m"},
                 {id:72,name:"Tentacool"},{id:73,name:"Tentacruel"},
                 {id:74,name:"Geodude"},{id:"74-alola",name:"Geodude",spriteId:10109},{id:75,name:"Graveler"},{id:"75-alola",name:"Graveler",spriteId:10110},{id:76,name:"Golem"},{id:"76-alola",name:"Golem",spriteId:10111},
                 {id:77,name:"Ponyta"},{id:"77-galar",name:"Ponyta",spriteId:10162},{id:78,name:"Rapidash"},{id:"78-galar",name:"Rapidash",spriteId:10163},
@@ -409,7 +491,7 @@
                 {id:111,name:"Rhyhorn"},{id:112,name:"Rhydon"},{id:464,name:"Rhyperior"},
                 {id:440,name:"Happiny"},{id:113,name:"Chansey"},{id:242,name:"Blissey"},
                 {id:114,name:"Tangela"},{id:465,name:"Tangrowth"},{id:115,name:"Kangaskhan"},{id:"115-mega",name:"Kangaskhan",spriteId:10039},
-                {id:116,name:"Horsea"},{id:117,name:"Seadra"},{id:230,name:"Kingdra"},{id:118,name:"Goldeen"},{id:119,name:"Seaking"},{id:120,name:"Staryu"},{id:121,name:"Starmie"},
+                {id:116,name:"Horsea"},{id:117,name:"Seadra"},{id:230,name:"Kingdra"},{id:118,name:"Goldeen"},{id:119,name:"Seaking"},{id:120,name:"Staryu"},{id:121,name:"Starmie"},{id:"121-mega",name:"Starmie",zaSprite:"121-m"},
                 {id:439,name:"Mime Jr."},{id:122,name:"Mr. Mime"},{id:"122-galar",name:"Mr. Mime",spriteId:10168},{id:866,name:"Mr. Rime"},
                 {id:123,name:"Scyther"},{id:212,name:"Scizor"},{id:"212-mega",name:"Scizor",spriteId:10046},{id:900,name:"Kleavor"},
                 {id:238,name:"Smoochum"},{id:124,name:"Jynx"},{id:239,name:"Elekid"},{id:125,name:"Electabuzz"},{id:466,name:"Electivire"},
@@ -423,13 +505,13 @@
                 {id:142,name:"Aerodactyl"},{id:"142-mega",name:"Aerodactyl",spriteId:10042},
                 {id:446,name:"Munchlax"},{id:143,name:"Snorlax"},
                 {id:144,name:"Articuno"},{id:"144-galar",name:"Articuno",spriteId:10169},{id:145,name:"Zapdos"},{id:"145-galar",name:"Zapdos",spriteId:10170},{id:146,name:"Moltres"},{id:"146-galar",name:"Moltres",spriteId:10171},
-                {id:147,name:"Dratini"},{id:148,name:"Dragonair"},{id:149,name:"Dragonite"},
+                {id:147,name:"Dratini"},{id:148,name:"Dragonair"},{id:149,name:"Dragonite"},{id:"149-mega",name:"Dragonite",zaSprite:"149-m"},
                 {id:150,name:"Mewtwo"},{id:"150-mega-x",name:"Mewtwo",spriteId:10043},{id:"150-mega-y",name:"Mewtwo",spriteId:10044},{id:151,name:"Mew"}
             ]},
             { id: 2, name: 'Generation 2', subtitle: 'Gold/Silver/Crystal', pokemon: [
-                {id:152,name:"Chikorita"},{id:153,name:"Bayleef"},{id:154,name:"Meganium"},
+                {id:152,name:"Chikorita"},{id:153,name:"Bayleef"},{id:154,name:"Meganium"},{id:"154-mega",name:"Meganium",zaSprite:"154-m"},
                 {id:155,name:"Cyndaquil"},{id:156,name:"Quilava"},{id:157,name:"Typhlosion"},{id:"157-hisui",name:"Typhlosion",spriteId:10233},
-                {id:158,name:"Totodile"},{id:159,name:"Croconaw"},{id:160,name:"Feraligatr"},
+                {id:158,name:"Totodile"},{id:159,name:"Croconaw"},{id:160,name:"Feraligatr"},{id:"160-mega",name:"Feraligatr",zaSprite:"160-m"},
                 {id:161,name:"Sentret"},{id:162,name:"Furret"},{id:163,name:"Hoothoot"},{id:164,name:"Noctowl"},
                 {id:165,name:"Ledyba"},{id:166,name:"Ledian"},{id:167,name:"Spinarak"},{id:168,name:"Ariados"},
                 {id:170,name:"Chinchou"},{id:171,name:"Lanturn"},
@@ -459,7 +541,7 @@
                 {id:220,name:"Swinub"},{id:221,name:"Piloswine"},{id:473,name:"Mamoswine"},
                 {id:222,name:"Corsola"},{id:"222-galar",name:"Corsola",spriteId:10173},{id:864,name:"Cursola"},
                 {id:223,name:"Remoraid"},{id:224,name:"Octillery"},{id:225,name:"Delibird"},
-                {id:458,name:"Mantyke"},{id:226,name:"Mantine"},{id:227,name:"Skarmory"},
+                {id:458,name:"Mantyke"},{id:226,name:"Mantine"},{id:227,name:"Skarmory"},{id:"227-mega",name:"Skarmory",zaSprite:"227-m"},
                 {id:228,name:"Houndour"},{id:229,name:"Houndoom"},{id:"229-mega",name:"Houndoom",spriteId:10048},
                 {id:231,name:"Phanpy"},{id:232,name:"Donphan"},{id:234,name:"Stantler"},{id:899,name:"Wyrdeer"},{id:235,name:"Smeargle"},{id:241,name:"Miltank"},
                 {id:243,name:"Raikou"},{id:244,name:"Entei"},{id:245,name:"Suicune"},
@@ -501,8 +583,8 @@
                 {id:347,name:"Anorith"},{id:348,name:"Armaldo"},{id:349,name:"Feebas"},{id:350,name:"Milotic"},
                 {id:351,name:"Castform"},{id:352,name:"Kecleon"},{id:353,name:"Shuppet"},{id:354,name:"Banette"},{id:"354-mega",name:"Banette",spriteId:10056},
                 {id:355,name:"Duskull"},{id:356,name:"Dusclops"},{id:477,name:"Dusknoir"},{id:357,name:"Tropius"},
-                {id:433,name:"Chingling"},{id:358,name:"Chimecho"},{id:359,name:"Absol"},{id:"359-mega",name:"Absol",spriteId:10057},
-                {id:361,name:"Snorunt"},{id:362,name:"Glalie"},{id:"362-mega",name:"Glalie",spriteId:10074},{id:478,name:"Froslass"},
+                {id:433,name:"Chingling"},{id:358,name:"Chimecho"},{id:"358-mega",name:"Chimecho",zaSprite:"358-m"},{id:359,name:"Absol"},{id:"359-mega",name:"Absol",spriteId:10057},{id:"359-mega-z",name:"Absol",zaSprite:"359-mz"},
+                {id:361,name:"Snorunt"},{id:362,name:"Glalie"},{id:"362-mega",name:"Glalie",spriteId:10074},{id:478,name:"Froslass"},{id:"478-mega",name:"Froslass",zaSprite:"478-m"},
                 {id:363,name:"Spheal"},{id:364,name:"Sealeo"},{id:365,name:"Walrein"},
                 {id:366,name:"Clamperl"},{id:367,name:"Huntail"},{id:368,name:"Gorebyss"},{id:369,name:"Relicanth"},{id:370,name:"Luvdisc"},
                 {id:371,name:"Bagon"},{id:372,name:"Shelgon"},{id:373,name:"Salamence"},{id:"373-mega",name:"Salamence",spriteId:10089},
@@ -516,7 +598,7 @@
                 {id:387,name:"Turtwig"},{id:388,name:"Grotle"},{id:389,name:"Torterra"},
                 {id:390,name:"Chimchar"},{id:391,name:"Monferno"},{id:392,name:"Infernape"},
                 {id:393,name:"Piplup"},{id:394,name:"Prinplup"},{id:395,name:"Empoleon"},
-                {id:396,name:"Starly"},{id:397,name:"Staravia"},{id:398,name:"Staraptor"},
+                {id:396,name:"Starly"},{id:397,name:"Staravia"},{id:398,name:"Staraptor"},{id:"398-mega",name:"Staraptor",zaSprite:"398-m"},
                 {id:399,name:"Bidoof"},{id:400,name:"Bibarel"},{id:401,name:"Kricketot"},{id:402,name:"Kricketune"},
                 {id:403,name:"Shinx"},{id:404,name:"Luxio"},{id:405,name:"Luxray"},
                 {id:408,name:"Cranidos"},{id:409,name:"Rampardos"},{id:410,name:"Shieldon"},{id:411,name:"Bastiodon"},
@@ -527,40 +609,40 @@
                 {id:427,name:"Buneary"},{id:428,name:"Lopunny"},{id:"428-mega",name:"Lopunny",spriteId:10088},
                 {id:431,name:"Glameow"},{id:432,name:"Purugly"},{id:434,name:"Stunky"},{id:435,name:"Skuntank"},
                 {id:436,name:"Bronzor"},{id:437,name:"Bronzong"},{id:441,name:"Chatot"},{id:442,name:"Spiritomb"},
-                {id:443,name:"Gible"},{id:444,name:"Gabite"},{id:445,name:"Garchomp"},{id:"445-mega",name:"Garchomp",spriteId:10058},
-                {id:447,name:"Riolu"},{id:448,name:"Lucario"},{id:"448-mega",name:"Lucario",spriteId:10059},
+                {id:443,name:"Gible"},{id:444,name:"Gabite"},{id:445,name:"Garchomp"},{id:"445-mega",name:"Garchomp",spriteId:10058},{id:"445-mega-z",name:"Garchomp",zaSprite:"445-mz"},
+                {id:447,name:"Riolu"},{id:448,name:"Lucario"},{id:"448-mega",name:"Lucario",spriteId:10059},{id:"448-mega-z",name:"Lucario",zaSprite:"448-mz"},
                 {id:449,name:"Hippopotas"},{id:450,name:"Hippowdon"},{id:451,name:"Skorupi"},{id:452,name:"Drapion"},
                 {id:453,name:"Croagunk"},{id:454,name:"Toxicroak"},{id:455,name:"Carnivine"},
                 {id:456,name:"Finneon"},{id:457,name:"Lumineon"},{id:459,name:"Snover"},{id:460,name:"Abomasnow"},{id:"460-mega",name:"Abomasnow",spriteId:10060},
                 {id:479,name:"Rotom"},{id:480,name:"Uxie"},{id:481,name:"Mesprit"},{id:482,name:"Azelf"},
                 {id:483,name:"Dialga"},{id:"483-origin",name:"Dialga",spriteId:10220},{id:484,name:"Palkia"},{id:"484-origin",name:"Palkia",spriteId:10221},
-                {id:485,name:"Heatran"},{id:486,name:"Regigigas"},{id:487,name:"Giratina"},{id:"487-origin",name:"Giratina",spriteId:10007},
-                {id:488,name:"Cresselia"},{id:489,name:"Phione"},{id:490,name:"Manaphy"},{id:491,name:"Darkrai"},{id:492,name:"Shaymin"},{id:493,name:"Arceus"}
+                {id:485,name:"Heatran"},{id:"485-mega",name:"Heatran",zaSprite:"485-m"},{id:486,name:"Regigigas"},{id:487,name:"Giratina"},{id:"487-origin",name:"Giratina",spriteId:10007},
+                {id:488,name:"Cresselia"},{id:489,name:"Phione"},{id:490,name:"Manaphy"},{id:491,name:"Darkrai"},{id:"491-mega",name:"Darkrai",zaSprite:"491-m"},{id:492,name:"Shaymin"},{id:493,name:"Arceus"}
             ]},
             { id: 5, name: 'Generation 5', subtitle: 'Black/White', pokemon: [
                 {id:494,name:"Victini"},{id:495,name:"Snivy"},{id:496,name:"Servine"},{id:497,name:"Serperior"},
-                {id:498,name:"Tepig"},{id:499,name:"Pignite"},{id:500,name:"Emboar"},
+                {id:498,name:"Tepig"},{id:499,name:"Pignite"},{id:500,name:"Emboar"},{id:"500-mega",name:"Emboar",zaSprite:"500-m"},
                 {id:501,name:"Oshawott"},{id:502,name:"Dewott"},{id:503,name:"Samurott"},{id:"503-hisui",name:"Samurott",spriteId:10236},
                 {id:504,name:"Patrat"},{id:505,name:"Watchog"},{id:506,name:"Lillipup"},{id:507,name:"Herdier"},{id:508,name:"Stoutland"},
                 {id:509,name:"Purrloin"},{id:510,name:"Liepard"},{id:511,name:"Pansage"},{id:512,name:"Simisage"},
                 {id:513,name:"Pansear"},{id:514,name:"Simisear"},{id:515,name:"Panpour"},{id:516,name:"Simipour"},
                 {id:517,name:"Munna"},{id:518,name:"Musharna"},{id:519,name:"Pidove"},{id:520,name:"Tranquill"},{id:521,name:"Unfezant"},
                 {id:522,name:"Blitzle"},{id:523,name:"Zebstrika"},{id:524,name:"Roggenrola"},{id:525,name:"Boldore"},{id:526,name:"Gigalith"},
-                {id:527,name:"Woobat"},{id:528,name:"Swoobat"},{id:529,name:"Drilbur"},{id:530,name:"Excadrill"},
+                {id:527,name:"Woobat"},{id:528,name:"Swoobat"},{id:529,name:"Drilbur"},{id:530,name:"Excadrill"},{id:"530-mega",name:"Excadrill",zaSprite:"530-m"},
                 {id:531,name:"Audino"},{id:"531-mega",name:"Audino",spriteId:10069},
                 {id:532,name:"Timburr"},{id:533,name:"Gurdurr"},{id:534,name:"Conkeldurr"},
                 {id:535,name:"Tympole"},{id:536,name:"Palpitoad"},{id:537,name:"Seismitoad"},
                 {id:538,name:"Throh"},{id:539,name:"Sawk"},{id:540,name:"Sewaddle"},{id:541,name:"Swadloon"},{id:542,name:"Leavanny"},
-                {id:543,name:"Venipede"},{id:544,name:"Whirlipede"},{id:545,name:"Scolipede"},
+                {id:543,name:"Venipede"},{id:544,name:"Whirlipede"},{id:545,name:"Scolipede"},{id:"545-mega",name:"Scolipede",zaSprite:"545-m"},
                 {id:546,name:"Cottonee"},{id:547,name:"Whimsicott"},{id:548,name:"Petilil"},{id:549,name:"Lilligant"},{id:"549-hisui",name:"Lilligant",spriteId:10237},
                 {id:550,name:"Basculin"},{id:902,name:"Basculegion"},
                 {id:551,name:"Sandile"},{id:552,name:"Krokorok"},{id:553,name:"Krookodile"},
                 {id:554,name:"Darumaka"},{id:"554-galar",name:"Darumaka",spriteId:10176},{id:555,name:"Darmanitan"},{id:"555-galar",name:"Darmanitan",spriteId:10177},
-                {id:556,name:"Maractus"},{id:557,name:"Dwebble"},{id:558,name:"Crustle"},{id:559,name:"Scraggy"},{id:560,name:"Scrafty"},
+                {id:556,name:"Maractus"},{id:557,name:"Dwebble"},{id:558,name:"Crustle"},{id:559,name:"Scraggy"},{id:560,name:"Scrafty"},{id:"560-mega",name:"Scrafty",zaSprite:"560-m"},
                 {id:561,name:"Sigilyph"},{id:562,name:"Yamask"},{id:"562-galar",name:"Yamask",spriteId:10178},{id:563,name:"Cofagrigus"},{id:867,name:"Runerigus"},
                 {id:564,name:"Tirtouga"},{id:565,name:"Carracosta"},{id:566,name:"Archen"},{id:567,name:"Archeops"},
                 {id:568,name:"Trubbish"},{id:569,name:"Garbodor"},
-                {id:570,name:"Zorua"},{id:"570-hisui",name:"Zorua",spriteId:10239},{id:571,name:"Zoroark"},{id:"571-hisui",name:"Zoroark",spriteId:10240},
+                {id:570,name:"Zorua"},{id:"570-hisui",name:"Zorua",spriteId:10238},{id:571,name:"Zoroark"},{id:"571-hisui",name:"Zoroark",spriteId:10239},
                 {id:572,name:"Minccino"},{id:573,name:"Cinccino"},{id:574,name:"Gothita"},{id:575,name:"Gothorita"},{id:576,name:"Gothitelle"},
                 {id:577,name:"Solosis"},{id:578,name:"Duosion"},{id:579,name:"Reuniclus"},
                 {id:580,name:"Ducklett"},{id:581,name:"Swanna"},{id:582,name:"Vanillite"},{id:583,name:"Vanillish"},{id:584,name:"Vanilluxe"},
@@ -569,14 +651,14 @@
                 {id:592,name:"Frillish"},{id:593,name:"Jellicent"},{id:594,name:"Alomomola"},
                 {id:595,name:"Joltik"},{id:596,name:"Galvantula"},{id:597,name:"Ferroseed"},{id:598,name:"Ferrothorn"},
                 {id:599,name:"Klink"},{id:600,name:"Klang"},{id:601,name:"Klinklang"},
-                {id:602,name:"Tynamo"},{id:603,name:"Eelektrik"},{id:604,name:"Eelektross"},
-                {id:605,name:"Elgyem"},{id:606,name:"Beheeyem"},{id:607,name:"Litwick"},{id:608,name:"Lampent"},{id:609,name:"Chandelure"},
+                {id:602,name:"Tynamo"},{id:603,name:"Eelektrik"},{id:604,name:"Eelektross"},{id:"604-mega",name:"Eelektross",zaSprite:"604-m"},
+                {id:605,name:"Elgyem"},{id:606,name:"Beheeyem"},{id:607,name:"Litwick"},{id:608,name:"Lampent"},{id:609,name:"Chandelure"},{id:"609-mega",name:"Chandelure",zaSprite:"609-m"},
                 {id:610,name:"Axew"},{id:611,name:"Fraxure"},{id:612,name:"Haxorus"},
                 {id:613,name:"Cubchoo"},{id:614,name:"Beartic"},{id:615,name:"Cryogonal"},
                 {id:616,name:"Shelmet"},{id:617,name:"Accelgor"},{id:618,name:"Stunfisk"},{id:"618-galar",name:"Stunfisk",spriteId:10179},
                 {id:619,name:"Mienfoo"},{id:620,name:"Mienshao"},{id:621,name:"Druddigon"},
-                {id:622,name:"Golett"},{id:623,name:"Golurk"},{id:624,name:"Pawniard"},{id:625,name:"Bisharp"},{id:983,name:"Kingambit"},
-                {id:626,name:"Bouffalant"},{id:627,name:"Rufflet"},{id:628,name:"Braviary"},{id:"628-hisui",name:"Braviary",spriteId:10241},
+                {id:622,name:"Golett"},{id:623,name:"Golurk"},{id:"623-mega",name:"Golurk",zaSprite:"623-m"},{id:624,name:"Pawniard"},{id:625,name:"Bisharp"},{id:983,name:"Kingambit"},
+                {id:626,name:"Bouffalant"},{id:627,name:"Rufflet"},{id:628,name:"Braviary"},{id:"628-hisui",name:"Braviary",spriteId:10240},
                 {id:629,name:"Vullaby"},{id:630,name:"Mandibuzz"},{id:631,name:"Heatmor"},{id:632,name:"Durant"},
                 {id:633,name:"Deino"},{id:634,name:"Zweilous"},{id:635,name:"Hydreigon"},{id:636,name:"Larvesta"},{id:637,name:"Volcarona"},
                 {id:638,name:"Cobalion"},{id:639,name:"Terrakion"},{id:640,name:"Virizion"},
@@ -585,54 +667,54 @@
                 {id:647,name:"Keldeo"},{id:648,name:"Meloetta"},{id:649,name:"Genesect"}
             ]},
             { id: 6, name: 'Generation 6', subtitle: 'X/Y', pokemon: [
-                {id:650,name:"Chespin"},{id:651,name:"Quilladin"},{id:652,name:"Chesnaught"},
-                {id:653,name:"Fennekin"},{id:654,name:"Braixen"},{id:655,name:"Delphox"},
-                {id:656,name:"Froakie"},{id:657,name:"Frogadier"},{id:658,name:"Greninja"},
+                {id:650,name:"Chespin"},{id:651,name:"Quilladin"},{id:652,name:"Chesnaught"},{id:"652-mega",name:"Chesnaught",zaSprite:"652-m"},
+                {id:653,name:"Fennekin"},{id:654,name:"Braixen"},{id:655,name:"Delphox"},{id:"655-mega",name:"Delphox",zaSprite:"655-m"},
+                {id:656,name:"Froakie"},{id:657,name:"Frogadier"},{id:658,name:"Greninja"},{id:"658-mega",name:"Greninja",zaSprite:"658-m"},
                 {id:659,name:"Bunnelby"},{id:660,name:"Diggersby"},{id:661,name:"Fletchling"},{id:662,name:"Fletchinder"},{id:663,name:"Talonflame"},
                 {id:664,name:"Scatterbug"},{id:665,name:"Spewpa"},{id:666,name:"Vivillon"},
-                {id:667,name:"Litleo"},{id:668,name:"Pyroar"},{id:669,name:"Flabébé"},{id:670,name:"Floette"},{id:671,name:"Florges"},
+                {id:667,name:"Litleo"},{id:668,name:"Pyroar"},{id:"668-mega",name:"Pyroar",zaSprite:"668-m"},{id:669,name:"Flabébé"},{id:670,name:"Floette"},{id:"670-mega",name:"Floette",zaSprite:"670-m"},{id:671,name:"Florges"},
                 {id:672,name:"Skiddo"},{id:673,name:"Gogoat"},{id:674,name:"Pancham"},{id:675,name:"Pangoro"},
-                {id:676,name:"Furfrou"},{id:677,name:"Espurr"},{id:678,name:"Meowstic"},
+                {id:676,name:"Furfrou"},{id:677,name:"Espurr"},{id:678,name:"Meowstic"},{id:"678-mega",name:"Meowstic",zaSprite:"678-m"},
                 {id:679,name:"Honedge"},{id:680,name:"Doublade"},{id:681,name:"Aegislash"},
                 {id:682,name:"Spritzee"},{id:683,name:"Aromatisse"},{id:684,name:"Swirlix"},{id:685,name:"Slurpuff"},
-                {id:686,name:"Inkay"},{id:687,name:"Malamar"},{id:688,name:"Binacle"},{id:689,name:"Barbaracle"},
-                {id:690,name:"Skrelp"},{id:691,name:"Dragalge"},{id:692,name:"Clauncher"},{id:693,name:"Clawitzer"},
+                {id:686,name:"Inkay"},{id:687,name:"Malamar"},{id:"687-mega",name:"Malamar",zaSprite:"687-m"},{id:688,name:"Binacle"},{id:689,name:"Barbaracle"},{id:"689-mega",name:"Barbaracle",zaSprite:"689-m"},
+                {id:690,name:"Skrelp"},{id:691,name:"Dragalge"},{id:"691-mega",name:"Dragalge",zaSprite:"691-m"},{id:692,name:"Clauncher"},{id:693,name:"Clawitzer"},
                 {id:694,name:"Helioptile"},{id:695,name:"Heliolisk"},{id:696,name:"Tyrunt"},{id:697,name:"Tyrantrum"},
-                {id:698,name:"Amaura"},{id:699,name:"Aurorus"},{id:701,name:"Hawlucha"},{id:702,name:"Dedenne"},{id:703,name:"Carbink"},
-                {id:704,name:"Goomy"},{id:705,name:"Sliggoo"},{id:"705-hisui",name:"Sliggoo",spriteId:10242},
-                {id:706,name:"Goodra"},{id:"706-hisui",name:"Goodra",spriteId:10243},
+                {id:698,name:"Amaura"},{id:699,name:"Aurorus"},{id:701,name:"Hawlucha"},{id:"701-mega",name:"Hawlucha",zaSprite:"701-m"},{id:702,name:"Dedenne"},{id:703,name:"Carbink"},
+                {id:704,name:"Goomy"},{id:705,name:"Sliggoo"},{id:"705-hisui",name:"Sliggoo",spriteId:10241},
+                {id:706,name:"Goodra"},{id:"706-hisui",name:"Goodra",spriteId:10242},
                 {id:707,name:"Klefki"},{id:708,name:"Phantump"},{id:709,name:"Trevenant"},
                 {id:710,name:"Pumpkaboo"},{id:711,name:"Gourgeist"},
-                {id:712,name:"Bergmite"},{id:713,name:"Avalugg"},{id:"713-hisui",name:"Avalugg",spriteId:10244},
-                {id:714,name:"Noibat"},{id:715,name:"Noivern"},{id:716,name:"Xerneas"},{id:717,name:"Yveltal"},{id:718,name:"Zygarde"},
+                {id:712,name:"Bergmite"},{id:713,name:"Avalugg"},{id:"713-hisui",name:"Avalugg",spriteId:10243},
+                {id:714,name:"Noibat"},{id:715,name:"Noivern"},{id:716,name:"Xerneas"},{id:717,name:"Yveltal"},{id:718,name:"Zygarde"},{id:"718-mega",name:"Zygarde",zaSprite:"718-m"},
                 {id:719,name:"Diancie"},{id:"719-mega",name:"Diancie",spriteId:10075},{id:720,name:"Hoopa"},{id:721,name:"Volcanion"}
             ]},
             { id: 7, name: 'Generation 7', subtitle: 'Sun/Moon', pokemon: [
-                {id:722,name:"Rowlet"},{id:723,name:"Dartrix"},{id:724,name:"Decidueye"},{id:"724-hisui",name:"Decidueye",spriteId:10245},
+                {id:722,name:"Rowlet"},{id:723,name:"Dartrix"},{id:724,name:"Decidueye"},{id:"724-hisui",name:"Decidueye",spriteId:10244},
                 {id:725,name:"Litten"},{id:726,name:"Torracat"},{id:727,name:"Incineroar"},
                 {id:728,name:"Popplio"},{id:729,name:"Brionne"},{id:730,name:"Primarina"},
                 {id:731,name:"Pikipek"},{id:732,name:"Trumbeak"},{id:733,name:"Toucannon"},
                 {id:734,name:"Yungoos"},{id:735,name:"Gumshoos"},{id:736,name:"Grubbin"},{id:737,name:"Charjabug"},{id:738,name:"Vikavolt"},
-                {id:739,name:"Crabrawler"},{id:740,name:"Crabominable"},{id:741,name:"Oricorio"},
+                {id:739,name:"Crabrawler"},{id:740,name:"Crabominable"},{id:"740-mega",name:"Crabominable",zaSprite:"740-m"},{id:741,name:"Oricorio"},
                 {id:742,name:"Cutiefly"},{id:743,name:"Ribombee"},{id:744,name:"Rockruff"},{id:745,name:"Lycanroc"},
                 {id:746,name:"Wishiwashi"},{id:747,name:"Mareanie"},{id:748,name:"Toxapex"},
                 {id:749,name:"Mudbray"},{id:750,name:"Mudsdale"},{id:751,name:"Dewpider"},{id:752,name:"Araquanid"},
                 {id:753,name:"Fomantis"},{id:754,name:"Lurantis"},{id:755,name:"Morelull"},{id:756,name:"Shiinotic"},
                 {id:757,name:"Salandit"},{id:758,name:"Salazzle"},{id:759,name:"Stufful"},{id:760,name:"Bewear"},
                 {id:761,name:"Bounsweet"},{id:762,name:"Steenee"},{id:763,name:"Tsareena"},{id:764,name:"Comfey"},
-                {id:765,name:"Oranguru"},{id:766,name:"Passimian"},{id:767,name:"Wimpod"},{id:768,name:"Golisopod"},
+                {id:765,name:"Oranguru"},{id:766,name:"Passimian"},{id:767,name:"Wimpod"},{id:768,name:"Golisopod"},{id:"768-mega",name:"Golisopod",zaSprite:"768-m"},
                 {id:769,name:"Sandygast"},{id:770,name:"Palossand"},{id:771,name:"Pyukumuku"},
                 {id:772,name:"Type: Null"},{id:773,name:"Silvally"},{id:774,name:"Minior"},{id:775,name:"Komala"},
                 {id:776,name:"Turtonator"},{id:777,name:"Togedemaru"},{id:778,name:"Mimikyu"},
-                {id:779,name:"Bruxish"},{id:780,name:"Drampa"},{id:781,name:"Dhelmise"},
+                {id:779,name:"Bruxish"},{id:780,name:"Drampa"},{id:"780-mega",name:"Drampa",zaSprite:"780-m"},{id:781,name:"Dhelmise"},
                 {id:782,name:"Jangmo-o"},{id:783,name:"Hakamo-o"},{id:784,name:"Kommo-o"},
                 {id:785,name:"Tapu Koko"},{id:786,name:"Tapu Lele"},{id:787,name:"Tapu Bulu"},{id:788,name:"Tapu Fini"},
                 {id:789,name:"Cosmog"},{id:790,name:"Cosmoem"},{id:791,name:"Solgaleo"},{id:792,name:"Lunala"},
                 {id:793,name:"Nihilego"},{id:794,name:"Buzzwole"},{id:795,name:"Pheromosa"},
                 {id:796,name:"Xurkitree"},{id:797,name:"Celesteela"},{id:798,name:"Kartana"},{id:799,name:"Guzzlord"},
-                {id:800,name:"Necrozma"},{id:801,name:"Magearna"},{id:802,name:"Marshadow"},
+                {id:800,name:"Necrozma"},{id:801,name:"Magearna"},{id:"801-mega",name:"Magearna",zaSprite:"801-m"},{id:802,name:"Marshadow"},
                 {id:803,name:"Poipole"},{id:804,name:"Naganadel"},{id:805,name:"Stakataka"},{id:806,name:"Blacephalon"},
-                {id:807,name:"Zeraora"},{id:808,name:"Meltan"},{id:809,name:"Melmetal"}
+                {id:807,name:"Zeraora"},{id:"807-mega",name:"Zeraora",zaSprite:"807-m"},{id:808,name:"Meltan"},{id:809,name:"Melmetal"}
             ]},
             { id: 8, name: 'Generation 8', subtitle: 'Sword/Shield', pokemon: [
                 {id:810,name:"Grookey"},{id:811,name:"Thwackey"},{id:812,name:"Rillaboom"},
@@ -650,7 +732,7 @@
                 {id:854,name:"Sinistea"},{id:855,name:"Polteageist"},{id:1012,name:"Poltchageist"},{id:1013,name:"Sinistcha"},
                 {id:856,name:"Hatenna"},{id:857,name:"Hattrem"},{id:858,name:"Hatterene"},
                 {id:859,name:"Impidimp"},{id:860,name:"Morgrem"},{id:861,name:"Grimmsnarl"},
-                {id:868,name:"Milcery"},{id:869,name:"Alcremie"},{id:870,name:"Falinks"},{id:871,name:"Pincurchin"},
+                {id:868,name:"Milcery"},{id:869,name:"Alcremie"},{id:870,name:"Falinks"},{id:"870-mega",name:"Falinks",zaSprite:"870-m"},{id:871,name:"Pincurchin"},
                 {id:872,name:"Snom"},{id:873,name:"Frosmoth"},{id:874,name:"Stonjourner"},{id:875,name:"Eiscue"},
                 {id:876,name:"Indeedee"},{id:877,name:"Morpeko"},{id:878,name:"Cufant"},{id:879,name:"Copperajah"},
                 {id:880,name:"Dracozolt"},{id:881,name:"Arctozolt"},{id:882,name:"Dracovish"},{id:883,name:"Arctovish"},
@@ -674,18 +756,18 @@
                 {id:938,name:"Tadbulb"},{id:939,name:"Bellibolt"},{id:940,name:"Wattrel"},{id:941,name:"Kilowattrel"},
                 {id:942,name:"Maschiff"},{id:943,name:"Mabosstiff"},{id:944,name:"Shroodle"},{id:945,name:"Grafaiai"},
                 {id:946,name:"Bramblin"},{id:947,name:"Brambleghast"},{id:948,name:"Toedscool"},{id:949,name:"Toedscruel"},
-                {id:950,name:"Klawf"},{id:951,name:"Capsakid"},{id:952,name:"Scovillain"},
+                {id:950,name:"Klawf"},{id:951,name:"Capsakid"},{id:952,name:"Scovillain"},{id:"952-mega",name:"Scovillain",zaSprite:"952-m"},
                 {id:953,name:"Rellor"},{id:954,name:"Rabsca"},{id:955,name:"Flittle"},{id:956,name:"Espathra"},
                 {id:957,name:"Tinkatink"},{id:958,name:"Tinkatuff"},{id:959,name:"Tinkaton"},
                 {id:960,name:"Wiglett"},{id:961,name:"Wugtrio"},{id:962,name:"Bombirdier"},
                 {id:963,name:"Finizen"},{id:964,name:"Palafin"},{id:965,name:"Varoom"},{id:966,name:"Revavroom"},
-                {id:967,name:"Cyclizar"},{id:968,name:"Orthworm"},{id:969,name:"Glimmet"},{id:970,name:"Glimmora"},
+                {id:967,name:"Cyclizar"},{id:968,name:"Orthworm"},{id:969,name:"Glimmet"},{id:970,name:"Glimmora"},{id:"970-mega",name:"Glimmora",zaSprite:"970-m"},
                 {id:971,name:"Greavard"},{id:972,name:"Houndstone"},{id:973,name:"Flamigo"},
-                {id:974,name:"Cetoddle"},{id:975,name:"Cetitan"},{id:976,name:"Veluza"},{id:977,name:"Dondozo"},{id:978,name:"Tatsugiri"},
+                {id:974,name:"Cetoddle"},{id:975,name:"Cetitan"},{id:976,name:"Veluza"},{id:977,name:"Dondozo"},{id:978,name:"Tatsugiri"},{id:"978-mega",name:"Tatsugiri",zaSprite:"978-m"},
                 {id:984,name:"Great Tusk"},{id:985,name:"Scream Tail"},{id:986,name:"Brute Bonnet"},{id:987,name:"Flutter Mane"},
                 {id:988,name:"Slither Wing"},{id:989,name:"Sandy Shocks"},{id:990,name:"Iron Treads"},{id:991,name:"Iron Bundle"},
                 {id:992,name:"Iron Hands"},{id:993,name:"Iron Jugulis"},{id:994,name:"Iron Moth"},{id:995,name:"Iron Thorns"},
-                {id:996,name:"Frigibax"},{id:997,name:"Arctibax"},{id:998,name:"Baxcalibur"},
+                {id:996,name:"Frigibax"},{id:997,name:"Arctibax"},{id:998,name:"Baxcalibur"},{id:"998-mega",name:"Baxcalibur",zaSprite:"998-m"},
                 {id:999,name:"Gimmighoul"},{id:1000,name:"Gholdengo"},
                 {id:1001,name:"Wo-Chien"},{id:1002,name:"Chien-Pao"},{id:1003,name:"Ting-Lu"},{id:1004,name:"Chi-Yu"},
                 {id:1005,name:"Roaring Moon"},{id:1006,name:"Iron Valiant"},{id:1007,name:"Koraidon"},{id:1008,name:"Miraidon"},
