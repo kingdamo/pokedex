@@ -226,6 +226,168 @@
         .generation-section.hidden {
             display: none;
         }
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        .filter-btn:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.6);
+        }
+        .filter-btn.active {
+            background: rgba(255,255,255,0.9);
+            color: #764ba2;
+            border-color: white;
+        }
+        .print-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        .print-btn:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.6);
+        }
+        #print-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .print-loading-content {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .print-loading-content p {
+            margin: 15px 0;
+            font-size: 1.1em;
+            color: #333;
+        }
+        .print-loading-content .progress {
+            font-size: 0.95em;
+            color: #666;
+        }
+        .print-loading-content button {
+            margin-top: 15px;
+            padding: 10px 25px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .print-loading-content button:hover {
+            background: #c0392b;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #764ba2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Print styles - Pokemon TCG card size: 2.5 x 3.5 inches (63.5mm x 88.9mm) */
+        @media print {
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                background: white !important;
+                padding: 0 !important;
+                font-family: Arial, sans-serif;
+            }
+            .container {
+                max-width: none;
+                margin: 0;
+                padding: 0;
+            }
+            #generations-container {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                align-content: flex-start;
+            }
+            h1, .collection-stats, .clear-collection, .search-container,
+            .generation-header, .toggle-icon, .filter-buttons, #print-loading { display: none !important; }
+            /* Remove generation boundaries - make all cards flow as one */
+            .generation-section {
+                display: contents !important;
+                background: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+            .pokemon-grid {
+                display: contents !important;
+            }
+            .pokemon-grid.open { display: contents !important; }
+            .pokemon-card {
+                width: 2.5in !important;
+                height: 3.5in !important;
+                min-width: 2.5in !important;
+                min-height: 3.5in !important;
+                max-width: 2.5in !important;
+                max-height: 3.5in !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                padding: 8px !important;
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+                background: #f8f9fa !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                page-break-inside: avoid;
+            }
+            .pokemon-card.collected {
+                background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
+            }
+            .pokemon-card:hover { transform: none !important; }
+            .pokemon-card img {
+                width: 120px !important;
+                height: 120px !important;
+                margin-bottom: 8px !important;
+            }
+            .pokemon-card:hover img { transform: none !important; }
+            .pokemon-number { font-size: 1em !important; color: #666 !important; }
+            .pokemon-name { font-size: 1.125em !important; font-weight: bold !important; }
+            .form-badge { font-size: 0.75em !important; }
+            .pokemon-card.collected::after { display: none !important; }
+            .pokemon-card[style*="display: none"] { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -239,6 +401,11 @@
             <div class="search-wrapper">
                 <input type="text" class="search-input" id="pokemon-search" placeholder="Search Pokemon by name..." oninput="filterPokemon(this.value)">
                 <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">All Pokemon</button>
+                <button class="filter-btn" id="filter-missing" onclick="setFilter('missing')">Missing Only</button>
+                <button class="print-btn" onclick="printCollection()">🖨️ Print View</button>
             </div>
         </div>
         <div id="generations-container"></div>
@@ -266,6 +433,10 @@
             saveCollection();
             updateCardVisual(pokemonId);
             updateStats();
+            // Reapply filters if in missing mode
+            if (currentFilter === 'missing') {
+                applyFilters();
+            }
         }
         
         function updateCardVisual(pokemonId) {
@@ -293,10 +464,31 @@
             }
         }
 
-        function filterPokemon(searchTerm) {
-            const term = searchTerm.toLowerCase().trim();
+        function filterPokemon() {
+            applyFilters();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('pokemon-search');
+            input.value = '';
+            filterPokemon('');
+            input.focus();
+        }
+
+        // Filter mode: 'all' or 'missing'
+        let currentFilter = 'all';
+
+        function setFilter(mode) {
+            currentFilter = mode;
+            document.getElementById('filter-all').classList.toggle('active', mode === 'all');
+            document.getElementById('filter-missing').classList.toggle('active', mode === 'missing');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('pokemon-search').value.toLowerCase().trim();
             const clearBtn = document.getElementById('search-clear');
-            clearBtn.classList.toggle('visible', term.length > 0);
+            clearBtn.classList.toggle('visible', searchTerm.length > 0);
 
             generations.forEach(gen => {
                 const section = document.getElementById(`gen-${gen.id}-grid`).closest('.generation-section');
@@ -304,27 +496,26 @@
                 const header = grid.previousElementSibling;
                 const icon = header.querySelector('.toggle-icon');
 
-                // Check if any Pokemon in this generation match (name or form type)
-                const hasMatches = !term || gen.pokemon.some(p =>
-                    p.name.toLowerCase().includes(term) || String(p.id).toLowerCase().includes(term)
-                );
+                // Check matches based on both search and filter mode
+                const hasMatches = gen.pokemon.some(p => {
+                    const matchesSearch = !searchTerm || p.name.toLowerCase().includes(searchTerm) || String(p.id).toLowerCase().includes(searchTerm);
+                    const matchesFilter = currentFilter === 'all' || !collection.has(String(p.id));
+                    return matchesSearch && matchesFilter;
+                });
 
-                // Hide entire section if no matches during search
-                if (term && !hasMatches) {
+                if ((searchTerm || currentFilter === 'missing') && !hasMatches) {
                     section.classList.add('hidden');
                 } else {
                     section.classList.remove('hidden');
                 }
 
-                if (term && hasMatches) {
-                    // Load and expand generation if it has matches
+                if ((searchTerm || currentFilter === 'missing') && hasMatches) {
                     if (!loadedGens.has(gen.id)) {
                         loadGeneration(gen.id);
                     }
                     grid.classList.add('open');
                     icon.classList.add('open');
-                } else if (!term) {
-                    // When search cleared, restore default collapsed state
+                } else if (!searchTerm && currentFilter === 'all') {
                     grid.classList.remove('open');
                     icon.classList.remove('open');
                 }
@@ -336,14 +527,16 @@
 
                     cards.forEach((card, index) => {
                         const pokemon = gen.pokemon[index];
-                        const matches = !term || pokemon.name.toLowerCase().includes(term) || String(pokemon.id).toLowerCase().includes(term);
-                        card.style.display = matches ? '' : 'none';
-                        if (matches) visibleCount++;
+                        const matchesSearch = !searchTerm || pokemon.name.toLowerCase().includes(searchTerm) || String(pokemon.id).toLowerCase().includes(searchTerm);
+                        const matchesFilter = currentFilter === 'all' || !collection.has(String(pokemon.id));
+                        const visible = matchesSearch && matchesFilter;
+                        card.style.display = visible ? '' : 'none';
+                        if (visible) visibleCount++;
                     });
 
-                    // Update header count when filtering
+                    // Update header count
                     const countEl = document.getElementById(`gen-${gen.id}-collected`);
-                    if (countEl && term) {
+                    if (countEl && (searchTerm || currentFilter === 'missing')) {
                         const collected = gen.pokemon.filter((p, i) => {
                             const card = cards[i];
                             return card && card.style.display !== 'none' && collection.has(String(p.id));
@@ -357,11 +550,172 @@
             });
         }
 
-        function clearSearch() {
-            const input = document.getElementById('pokemon-search');
-            input.value = '';
-            filterPokemon('');
-            input.focus();
+        let isPrinting = false;
+        let printCancelled = false;
+
+        function printCollection() {
+            if (isPrinting) return;
+            isPrinting = true;
+            printCancelled = false;
+
+            // Show loading overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'print-loading';
+            overlay.innerHTML = '<div class="print-loading-content"><div class="spinner"></div><p>Loading Pokemon data...</p><p class="progress"></p><button onclick="cancelPrint()">Cancel</button></div>';
+            document.body.appendChild(overlay);
+
+            const updateStatus = (msg) => {
+                const p = overlay.querySelector('.print-loading-content > p:first-of-type');
+                if (p) p.textContent = msg;
+            };
+
+            const updateProgress = (loaded, total) => {
+                const progressEl = overlay.querySelector('.progress');
+                if (progressEl) progressEl.textContent = `${loaded} / ${total} images loaded`;
+            };
+
+            window.cancelPrint = () => {
+                printCancelled = true;
+                overlay.remove();
+                isPrinting = false;
+            };
+
+            // Step 1: Load all generations and wait for them to complete
+            updateStatus('Loading all Pokemon...');
+
+            const unloadedGens = generations.filter(gen => !loadedGens.has(gen.id));
+            unloadedGens.forEach(gen => loadGeneration(gen.id));
+
+            // Wait for all generations to be loaded (loadGeneration uses 50ms timeout)
+            const waitForGens = () => {
+                return new Promise(resolve => {
+                    const check = () => {
+                        if (printCancelled) return resolve();
+                        const allLoaded = generations.every(gen => loadedGens.has(gen.id));
+                        if (allLoaded) {
+                            resolve();
+                        } else {
+                            setTimeout(check, 100);
+                        }
+                    };
+                    check();
+                });
+            };
+
+            waitForGens().then(() => {
+                if (printCancelled) return;
+
+                // Step 2: Open all grids and apply current filter
+                updateStatus('Applying filters...');
+
+                const searchTerm = document.getElementById('pokemon-search').value.toLowerCase().trim();
+
+                generations.forEach(gen => {
+                    const grid = document.getElementById(`gen-${gen.id}-grid`);
+                    grid.classList.add('open');
+
+                    const cards = grid.querySelectorAll('.pokemon-card');
+                    cards.forEach((card, index) => {
+                        const pokemon = gen.pokemon[index];
+                        if (!pokemon) return;
+                        const matchesSearch = !searchTerm ||
+                            pokemon.name.toLowerCase().includes(searchTerm) ||
+                            String(pokemon.id).toLowerCase().includes(searchTerm);
+                        const matchesFilter = currentFilter === 'all' || !collection.has(String(pokemon.id));
+                        card.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+                    });
+                });
+
+                // Step 3: Collect only visible images
+                const visibleImages = [];
+                document.querySelectorAll('.pokemon-card').forEach(card => {
+                    if (card.style.display !== 'none') {
+                        const img = card.querySelector('img');
+                        if (img) visibleImages.push(img);
+                    }
+                });
+
+                if (printCancelled) return;
+
+                const totalImages = visibleImages.length;
+
+                if (totalImages === 0) {
+                    overlay.remove();
+                    window.print();
+                    isPrinting = false;
+                    return;
+                }
+
+                // Step 4: Load all visible images
+                updateStatus('Loading images...');
+                updateProgress(0, totalImages);
+
+                let loadedCount = 0;
+                let hasPrinted = false;
+
+                const doPrint = () => {
+                    if (hasPrinted || printCancelled) return;
+                    hasPrinted = true;
+                    overlay.remove();
+                    window.print();
+                    isPrinting = false;
+                };
+
+                // Track which images we've already counted
+                const countedImages = new Set();
+
+                visibleImages.forEach(img => {
+                    // Remove lazy loading
+                    img.loading = 'eager';
+
+                    // If already fully loaded, count it
+                    if (img.complete && img.naturalHeight > 0) {
+                        if (!countedImages.has(img)) {
+                            countedImages.add(img);
+                            loadedCount++;
+                            updateProgress(loadedCount, totalImages);
+                        }
+                    } else {
+                        // Force load via new Image
+                        const newImg = new Image();
+                        newImg.onload = () => {
+                            if (!countedImages.has(img)) {
+                                countedImages.add(img);
+                                loadedCount++;
+                                updateProgress(loadedCount, totalImages);
+                                if (loadedCount >= totalImages) {
+                                    setTimeout(doPrint, 200);
+                                }
+                            }
+                        };
+                        newImg.onerror = () => {
+                            if (!countedImages.has(img)) {
+                                countedImages.add(img);
+                                loadedCount++;
+                                updateProgress(loadedCount, totalImages);
+                                if (loadedCount >= totalImages) {
+                                    setTimeout(doPrint, 200);
+                                }
+                            }
+                        };
+                        newImg.src = img.src;
+                    }
+                });
+
+                // Check if all already loaded
+                if (loadedCount >= totalImages) {
+                    setTimeout(doPrint, 200);
+                    return;
+                }
+
+                // Fallback: print after 60 seconds if images are slow
+                setTimeout(() => {
+                    if (!hasPrinted && !printCancelled) {
+                        updateStatus('Timeout - printing with loaded images...');
+                        setTimeout(doPrint, 500);
+                    }
+                }, 60000);
+            });
         }
 
         // Sprite ID mapping for forms (PokeAPI form IDs)
