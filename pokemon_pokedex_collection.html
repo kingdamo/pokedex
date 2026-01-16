@@ -153,34 +153,12 @@
         .form-badge.paldea { background: linear-gradient(135deg, #ff9f43, #ee5a24); color: white; }
         .form-badge.other { background: linear-gradient(135deg, #636e72, #2d3436); color: white; }
         .loading { text-align: center; padding: 20px; color: #666; }
-        .clear-collection {
-            display: block;
-            margin: 0 auto 20px;
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.4);
-            color: white;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.3s;
-        }
-        .clear-collection:hover {
-            background: rgba(255,255,255,0.3);
-            border-color: rgba(255,255,255,0.6);
-        }
-        .search-container {
+        .search-wrapper {
             position: sticky;
             top: 10px;
             z-index: 100;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .search-wrapper {
-            position: relative;
-            display: inline-block;
-            width: 100%;
             max-width: 400px;
+            margin: 0 auto 20px;
         }
         .search-input {
             width: 100%;
@@ -226,45 +204,45 @@
         .generation-section.hidden {
             display: none;
         }
-        .filter-buttons {
+        .action-bar {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             justify-content: center;
-            margin-top: 15px;
+            align-items: center;
+            margin-bottom: 15px;
             flex-wrap: wrap;
         }
-        .filter-btn {
-            padding: 8px 16px;
-            border: 2px solid rgba(255,255,255,0.4);
-            background: rgba(255,255,255,0.15);
+        .action-btn {
+            padding: 6px 12px;
+            border: 1.5px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
             color: white;
-            border-radius: 20px;
+            border-radius: 16px;
             cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.3s;
+            font-size: 0.8em;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
-        .filter-btn:hover {
-            background: rgba(255,255,255,0.25);
-            border-color: rgba(255,255,255,0.6);
+        .action-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.5);
         }
-        .filter-btn.active {
+        .action-btn.active {
             background: rgba(255,255,255,0.9);
             color: #764ba2;
             border-color: white;
         }
-        .print-btn {
-            padding: 8px 16px;
-            border: 2px solid rgba(255,255,255,0.4);
-            background: rgba(255,255,255,0.15);
-            color: white;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.3s;
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
-        .print-btn:hover {
-            background: rgba(255,255,255,0.25);
-            border-color: rgba(255,255,255,0.6);
+        .action-divider {
+            width: 1px;
+            height: 20px;
+            background: rgba(255,255,255,0.3);
+            margin: 0 4px;
         }
         #print-loading {
             position: fixed;
@@ -339,8 +317,8 @@
                 justify-content: center;
                 align-content: flex-start;
             }
-            h1, .collection-stats, .clear-collection, .search-container,
-            .generation-header, .toggle-icon, .filter-buttons, #print-loading { display: none !important; }
+            h1, .collection-stats, .sync-toast, .action-bar, .search-wrapper,
+            .generation-header, .toggle-icon, #print-loading { display: none !important; }
             /* Remove generation boundaries - make all cards flow as one */
             .generation-section {
                 display: contents !important;
@@ -388,6 +366,43 @@
             .pokemon-card.collected::after { display: none !important; }
             .pokemon-card[style*="display: none"] { display: none !important; }
         }
+        /* Cloud sync styles */
+        .sync-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        .action-btn.syncing .sync-spinner { display: inline-block; }
+        .action-btn.syncing .sync-icon { display: none; }
+        .sync-name {
+            font-size: 0.75em;
+            opacity: 0.8;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .sync-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            z-index: 10000;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .sync-toast.show { transform: translateX(-50%) translateY(0); }
+        .sync-toast.success { background: linear-gradient(135deg, #10ac84, #1dd1a1); }
+        .sync-toast.error { background: linear-gradient(135deg, #ee5a24, #e74c3c); }
     </style>
 </head>
 <body>
@@ -396,18 +411,24 @@
         <div class="collection-stats">
             <span>📦 Collection: <strong id="total-collected">0</strong> / <strong id="total-pokemon">0</strong> Pokémon</span>
         </div>
-        <button class="clear-collection" onclick="clearCollection()">🗑️ Clear Collection</button>
-        <div class="search-container">
-            <div class="search-wrapper">
-                <input type="text" class="search-input" id="pokemon-search" placeholder="Search Pokemon by name..." oninput="filterPokemon(this.value)">
-                <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
-            </div>
-            <div class="filter-buttons">
-                <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">All Pokemon</button>
-                <button class="filter-btn" id="filter-missing" onclick="setFilter('missing')">Missing Only</button>
-                <button class="print-btn" onclick="printCollection()">🖨️ Print View</button>
-            </div>
+        <div class="action-bar">
+            <button class="action-btn active" id="filter-all" onclick="setFilter('all')">All</button>
+            <button class="action-btn" id="filter-missing" onclick="setFilter('missing')">Missing</button>
+            <span class="action-divider"></span>
+            <button class="action-btn" id="sync-btn" onclick="syncCollection()">
+                <span class="sync-icon">☁️</span>
+                <span class="sync-spinner"></span>
+                <span>Sync</span>
+                <span class="sync-name" id="sync-name"></span>
+            </button>
+            <button class="action-btn" onclick="printCollection()">🖨️ Print</button>
+            <button class="action-btn" onclick="clearCollection()">🗑️ Clear</button>
         </div>
+        <div class="search-wrapper">
+            <input type="text" class="search-input" id="pokemon-search" placeholder="Search Pokemon by name..." oninput="filterPokemon(this.value)">
+            <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+        </div>
+        <div class="sync-toast" id="sync-toast"></div>
         <div id="generations-container"></div>
     </div>
     <script>
@@ -463,6 +484,223 @@
                 updateStats();
             }
         }
+
+        // Cloud sync with JSONBin.io
+        const JSONBIN_API = 'https://api.jsonbin.io/v3';
+        const JSONBIN_KEY = '$2a$10$DpHfdiwUFeM7CKTO6BQU6O6iso2ktanWIY2xKvPYNAl2WXdIDmux.';
+        const INDEX_BIN_ID = '696a4116ae596e708fe08602'; // Shared index mapping collection names to bins
+        let collectionName = localStorage.getItem('pokemonCollectionName');
+        let binId = localStorage.getItem('pokemonBinId');
+
+        function updateCollectionNameDisplay() {
+            const nameEl = document.getElementById('sync-name');
+            if (nameEl) {
+                nameEl.textContent = collectionName ? `(${collectionName})` : '';
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('sync-toast');
+            toast.textContent = message;
+            toast.className = 'sync-toast ' + type + ' show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function setSyncing(syncing) {
+            const btn = document.getElementById('sync-btn');
+            btn.classList.toggle('syncing', syncing);
+            btn.disabled = syncing;
+        }
+
+        function ensureCollectionName() {
+            if (collectionName) return true;
+            const name = prompt('Enter a name for your collection (used as sync key):');
+            if (!name) return false;
+            collectionName = name.trim().toLowerCase().replace(/\s+/g, '-');
+            localStorage.setItem('pokemonCollectionName', collectionName);
+            updateCollectionNameDisplay();
+            return true;
+        }
+
+        function changeCollectionName() {
+            const name = prompt(
+                'Enter collection name for syncing:\n' +
+                '(Use the same name on different devices to share)\n\n' +
+                'Current: ' + (collectionName || 'none'),
+                collectionName || ''
+            );
+            if (name === null) return;
+
+            if (!name.trim()) {
+                collectionName = null;
+                binId = null;
+                localStorage.removeItem('pokemonCollectionName');
+                localStorage.removeItem('pokemonBinId');
+            } else {
+                collectionName = name.trim().toLowerCase().replace(/\s+/g, '-');
+                binId = null; // Clear cached bin ID to look up fresh from index
+                localStorage.setItem('pokemonCollectionName', collectionName);
+                localStorage.removeItem('pokemonBinId');
+            }
+            updateCollectionNameDisplay();
+        }
+
+        // Fetch the master index that maps collection names to bin IDs
+        async function getIndex() {
+            try {
+                const res = await fetch(`${JSONBIN_API}/b/${INDEX_BIN_ID}/latest`, {
+                    headers: { 'X-Access-Key': JSONBIN_KEY }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.record || {};
+                }
+            } catch (e) {
+                console.error('Failed to fetch index:', e);
+            }
+            return {};
+        }
+
+        async function updateIndex(index) {
+            if (!INDEX_BIN_ID) return;
+            await fetch(`${JSONBIN_API}/b/${INDEX_BIN_ID}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Access-Key': JSONBIN_KEY
+                },
+                body: JSON.stringify(index)
+            });
+        }
+
+        async function syncCollection() {
+            if (!ensureCollectionName()) return;
+
+            setSyncing(true);
+
+            try {
+                // Get the master index
+                const index = await getIndex();
+
+                // Look up bin ID by collection name
+                let existingBinId = binId || index[collectionName];
+                let existingBin = null;
+
+                if (existingBinId) {
+                    try {
+                        const res = await fetch(`${JSONBIN_API}/b/${existingBinId}/latest`, {
+                            headers: { 'X-Access-Key': JSONBIN_KEY }
+                        });
+                        if (res.ok) {
+                            existingBin = { id: existingBinId, data: await res.json() };
+                            // Cache the bin ID locally
+                            binId = existingBinId;
+                            localStorage.setItem('pokemonBinId', binId);
+                        }
+                    } catch (e) {
+                        console.log('Could not fetch existing bin:', e);
+                    }
+                }
+
+                const localData = {
+                    collection: [...collection],
+                    timestamp: Date.now(),
+                    name: collectionName
+                };
+
+                if (existingBin && existingBin.data && existingBin.data.record) {
+                    const remoteData = existingBin.data.record;
+                    const remoteTimestamp = remoteData.timestamp || 0;
+                    const localTimestamp = parseInt(localStorage.getItem('pokemonLastSync') || '0');
+
+                    // Compare: if remote is newer and has different data, ask user
+                    if (remoteTimestamp > localTimestamp && remoteData.collection) {
+                        const remoteSet = new Set(remoteData.collection.map(String));
+                        const localSet = new Set([...collection].map(String));
+                        const isDifferent = remoteSet.size !== localSet.size ||
+                            [...remoteSet].some(id => !localSet.has(id));
+
+                        if (isDifferent) {
+                            const choice = confirm(
+                                `Cloud has a newer version (${new Date(remoteTimestamp).toLocaleString()}).\n\n` +
+                                `Cloud: ${remoteData.collection.length} Pokemon\n` +
+                                `Local: ${collection.size} Pokemon\n\n` +
+                                `Click OK to load from cloud, Cancel to overwrite cloud with local.`
+                            );
+
+                            if (choice) {
+                                // Load from cloud
+                                collection = new Set(remoteData.collection.map(String));
+                                saveCollection();
+                                document.querySelectorAll('.pokemon-card').forEach(card => {
+                                    const id = card.dataset.pokemonId;
+                                    card.classList.toggle('collected', collection.has(id));
+                                });
+                                updateStats();
+                                localStorage.setItem('pokemonLastSync', String(remoteTimestamp));
+                                showToast(`Loaded ${collection.size} Pokemon from cloud`, 'success');
+                                setSyncing(false);
+                                return;
+                            }
+                        }
+                    }
+
+                    // Update existing bin
+                    const updateRes = await fetch(`${JSONBIN_API}/b/${existingBin.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Access-Key': JSONBIN_KEY
+                        },
+                        body: JSON.stringify(localData)
+                    });
+
+                    if (updateRes.ok) {
+                        localStorage.setItem('pokemonLastSync', String(localData.timestamp));
+                        showToast(`Synced "${collectionName}" to cloud`, 'success');
+                    } else {
+                        throw new Error('Failed to update');
+                    }
+                } else {
+                    // Create new bin for this collection
+                    const createRes = await fetch(`${JSONBIN_API}/b`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Access-Key': JSONBIN_KEY,
+                            'X-Bin-Name': `pokemon-${collectionName}`,
+                            'X-Bin-Private': 'false'
+                        },
+                        body: JSON.stringify(localData)
+                    });
+
+                    if (createRes.ok) {
+                        const result = await createRes.json();
+                        binId = result.metadata.id;
+                        localStorage.setItem('pokemonBinId', binId);
+                        localStorage.setItem('pokemonLastSync', String(localData.timestamp));
+
+                        // Update the master index
+                        index[collectionName] = binId;
+                        await updateIndex(index);
+
+                        showToast(`Created "${collectionName}" in cloud`, 'success');
+                    } else {
+                        const errorText = await createRes.text();
+                        console.error('Create failed:', errorText);
+                        throw new Error('Failed to create bin');
+                    }
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+                showToast('Sync failed. Please try again.', 'error');
+            }
+
+            setSyncing(false);
+        }
+
+        // Initialize collection name display on load
+        document.addEventListener('DOMContentLoaded', updateCollectionNameDisplay);
 
         function filterPokemon() {
             applyFilters();
@@ -548,6 +786,37 @@
                     }
                 }
             });
+        }
+
+        function applyFiltersForGen(genId) {
+            const gen = generations.find(g => g.id === genId);
+            if (!gen) return;
+            const grid = document.getElementById(`gen-${genId}-grid`);
+            const cards = grid.querySelectorAll('.pokemon-card');
+            const searchTerm = document.getElementById('pokemon-search').value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            cards.forEach((card, index) => {
+                const pokemon = gen.pokemon[index];
+                if (!pokemon) return;
+                const matchesSearch = !searchTerm || pokemon.name.toLowerCase().includes(searchTerm) || String(pokemon.id).toLowerCase().includes(searchTerm);
+                const matchesFilter = currentFilter === 'all' || !collection.has(String(pokemon.id));
+                const visible = matchesSearch && matchesFilter;
+                card.style.display = visible ? '' : 'none';
+                if (visible) visibleCount++;
+            });
+
+            const countEl = document.getElementById(`gen-${genId}-collected`);
+            if (countEl && (searchTerm || currentFilter === 'missing')) {
+                const collected = gen.pokemon.filter((p, i) => {
+                    const card = cards[i];
+                    return card && card.style.display !== 'none' && collection.has(String(p.id));
+                }).length;
+                countEl.textContent = `${collected} / ${visibleCount} shown`;
+            } else if (countEl) {
+                const collected = gen.pokemon.filter(p => collection.has(String(p.id))).length;
+                countEl.textContent = `${collected} / ${gen.pokemon.length} collected`;
+            }
         }
 
         let isPrinting = false;
@@ -837,12 +1106,12 @@
                     card.className = `pokemon-card${collection.has(String(pokemon.id)) ? ' collected' : ''}`;
                     card.setAttribute('data-pokemon-id', pokemon.id);
                     card.onclick = () => toggleCollection(pokemon.id);
-                    
+
                     const badge = getFormBadge(pokemon.id);
                     const num = typeof pokemon.id === 'string' ? pokemon.id.split('-')[0] : pokemon.id;
-                    
+
                     card.innerHTML = `
-                        <img src="${getImageUrl(pokemon)}" 
+                        <img src="${getImageUrl(pokemon)}"
                              alt="${pokemon.name}"
                              loading="lazy"
                              onerror="this.onerror=()=>{this.src='${getBasicUrl(pokemon)}'};this.src='${getFallbackUrl(pokemon)}'">
@@ -853,6 +1122,11 @@
                     grid.appendChild(card);
                 });
                 loadedGens.add(genId);
+                // Re-apply filters if active filter or search
+                const searchTerm = document.getElementById('pokemon-search').value.trim();
+                if (currentFilter !== 'all' || searchTerm) {
+                    applyFiltersForGen(genId);
+                }
             }, 50);
         }
 
